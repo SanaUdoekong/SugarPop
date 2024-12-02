@@ -17,10 +17,15 @@ import sugar_grain
 import bucket
 import level
 import message_display
+import sounds 
 
 class Game:
     def __init__(self) -> None:
         pg.init()
+        self.snd = sounds.Sound()
+
+        self.snd.load_bg()
+
         self.screen = pg.display.set_mode(RES)
         self.clock = pg.time.Clock()
         self.iter = 0
@@ -29,12 +34,13 @@ class Game:
         self.font = pg.font.SysFont(None, 36)  # Default font, size 36
 
         # Create a Pymunk space with gravity
-        self.current_level = 2 # Start game at 0
+        self.current_level = 0 # Start game at 0
         self.level_complete = False
         self.space = pymunk.Space()
         self.space.gravity = (0, -9)  # Gravity pointing downwards in Pymunk's coordinate system
         # Iterations defaults to 10. Higher is more accurate collison detection
         self.space.iterations = 30 
+        self.is_paused = False
 
         self.drawing_lines = []
         self.sugar_grains = []
@@ -116,9 +122,13 @@ class Game:
 
     def update(self):
         '''Update the program physics'''
+        if self.is_paused:
+            return
+        
         # Keep an overall iterator
         self.iter += 1
         
+            
         # Calculate time since last frame
         delta_time = self.clock.tick(FPS) / 1000.0  # Convert milliseconds to seconds
 
@@ -147,6 +157,9 @@ class Game:
                     # If all the buckets are gone, level up!
                     if not self.level_complete and self.check_all_buckets_exploded():
                         self.level_complete = True
+                        self.snd.pause_bg()
+                        self.snd.play('lvl_complete')
+                        self.snd.unpause_bg()
                         self.message_display.show_message("Level Complete!", 2)
                         pg.time.set_timer(LOAD_NEW_LEVEL, 2000)  # Schedule next level load
                 else:
@@ -226,6 +239,16 @@ class Game:
             if event.type == EXIT_APP or event.type == pg.QUIT or (event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE):
                 pg.quit()
                 sys.exit()
+
+            # Implementing level restart
+            elif event.type == pg.KEYDOWN and event.key == pg.K_r:
+                 self.current_level -= 1
+                 pg.time.set_timer(LOAD_NEW_LEVEL, 100)  # Load level
+            
+            # Implement a pause
+            elif event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                self.is_paused = not self.is_paused
+  
             elif event.type == pg.MOUSEBUTTONDOWN:
                 self.mouse_down = True
                 # Get mouse position and start a new dynamic line
@@ -253,9 +276,10 @@ class Game:
                 pg.time.set_timer(START_FLOW, 0)
                 
             elif event.type == LOAD_NEW_LEVEL:
-                pg.time.set_timer(LOAD_NEW_LEVEL, 0)  # Clear the timer
+                pg.time.set_timer(LOAD_NEW_LEVEL, 0)  # Clear the time
                 self.intro_image = None
                 self.current_level += 1
+                
                 if not self.load_level(self.current_level):
                     self.message_display.show_message("You Win!", 5)  # End of game message
                     pg.time.set_timer(EXIT_APP, 5000)  # Quit game after 5 seconds

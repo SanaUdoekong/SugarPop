@@ -1,0 +1,92 @@
+{
+    "number_sugar_grains": 250,
+    "statics": [
+        {
+            "x1": 100,
+            "y1": 500,
+            "x2": 300,
+            "y2": 250,
+            "color": "gray",
+            "line_width": 3,
+            "friction": 0.3,
+            "restitution": 0.5
+        },
+        {
+            "x1": 300,
+            "y1": 250,
+            "x2": 500,
+            "y2": 500,
+            "color": "gray",
+            "line_width": 3,
+            "friction": 0.3,
+            "restitution": 0.5
+        },
+        {
+            "x1": 500,
+            "y1": 500,
+            "x2": 700,
+            "y2": 250,
+            "color": "gray",
+            "line_width": 3,
+            "friction": 0.3,
+            "restitution": 0.5
+        },
+        {
+            "x1": 700,
+            "y1": 250,
+            "x2": 900,
+            "y2": 500,
+            "color": "gray",
+            "line_width": 3,
+            "friction": 0.3,
+            "restitution": 0.5
+        }
+    ],
+    "buckets": [
+        {
+            "x": 280,
+            "y": 140,
+            "width": 40,
+            "height": 40,
+            "needed_sugar": 30
+        },
+        {
+            "x": 320,
+            "y": 140,
+            "width": 40,
+            "height": 40,
+            "needed_sugar": 30
+        },
+        {
+            "x": 800,
+            "y": 100,
+            "width": 40,
+            "height": 40,
+            "needed_sugar": 30
+        },
+        {
+            "x": 300,
+            "y": 100,
+            "width": 40,
+            "height": 40,
+            "needed_sugar": 30
+        },
+        {
+            "x": 780,
+            "y": 140,
+            "width": 40,
+            "height": 40,
+            "needed_sugar": 30
+        },
+        {
+            "x": 820,
+            "y": 140,
+            "width": 40,
+            "height": 40,
+            "needed_sugar": 30
+        }
+    ],
+    "spout_x": 512,
+    "spout_y": 790,
+    "time_to_complete_level": 120
+}
