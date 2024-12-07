@@ -29,6 +29,11 @@ START_FLOW = pg.USEREVENT + 1
 FLOW_DELAY = pg.USEREVENT + 2
 LOAD_NEW_LEVEL = pg.USEREVENT + 3
 EXIT_APP = pg.USEREVENT + 4
+EXPLODE_HELP_BUCKET = pg.USEREVENT + 5
 
 # Sound
 SND_FOLDER = "./sounds/"
+SOUNDS = {'background': ('background.mp3', 0), 'add_sugar': ('add.mp3', 1), 'explosion': ('explosion.mp3', 2),
+                       'lvl_complete': ('complete_lvl.mp3', 3), 
+                       }
+

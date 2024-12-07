@@ -2,7 +2,7 @@
 # Module Name: Sugar Pop Bucket Module
 # Project: Sugar Pop Program
 # Date: Nov 17, 2024
-# By: Brett W. Huffman
+# By: Sana I. Udoekong
 # Description: The bucket implementation of the sugar pop game
 #############################################################
 
@@ -24,6 +24,7 @@ class Bucket:
         :param width: Width of the bucket in pixels.
         :param height: Height of the bucket in pixels.
         """
+        
         self.snd = sounds.Sound()
 
         self.space = space
@@ -31,6 +32,11 @@ class Bucket:
         self.height = height / SCALE
         self.count = 0  # Counter for collected sugar grains
         self.needed_sugar = needed_sugar
+        self.sound_played = False
+
+        self.collected_sugars = []  # List to store collected (inside the bucket) sugar grains
+        self.joints = []  # List to store joints attached to the sugar grains
+
 
         wall_thickness = 0.2  # Thickness of the walls in physics units
 
@@ -38,6 +44,7 @@ class Bucket:
         x_pymunk = x / SCALE
         y_pymunk = y / SCALE # (HEIGHT - y) / SCALE  # Adjust y-coordinate for Pymunk's coordinate system
 
+        
         # Left wall
         left_wall_start = (x_pymunk - self.width / 2, y_pymunk - self.height / 2)
         left_wall_end = (x_pymunk - self.width / 2, y_pymunk + self.height / 2)
@@ -61,7 +68,12 @@ class Bucket:
         self.bottom_wall.friction = 0.5
         self.bottom_wall.elasticity = 0.5
         space.add(self.bottom_wall)
-        
+    
+
+        # coordinates for displayng bucket count
+        self.x = x
+        self.y = HEIGHT-y
+
         self.exploded = False  # Track if the bucket has exploded
 
     def explode(self, grains):
@@ -77,7 +89,7 @@ class Bucket:
         bucket_center_x = (self.left_wall.a[0] + self.right_wall.a[0]) / 2
         bucket_center_y = (self.left_wall.a[1] + self.left_wall.b[1]) / 2
 
-        self.snd.play('explosion')
+        self.snd.play('explosion')    # Play a sound when the bucket explodes
 
         # Apply radial force to each grain
         for grain in grains:
@@ -103,7 +115,8 @@ class Bucket:
         self.space.remove(self.left_wall, self.right_wall, self.bottom_wall)
 
         self.exploded = True  # Mark the bucket as exploded
-        
+
+
     def draw(self, screen):
         """
         Draw the bucket with an open top on the Pygame screen.
@@ -143,13 +156,30 @@ class Bucket:
         bottom = self.bottom_wall.a[1]
         top = self.left_wall.b[1]
 
+
+
         # Check if the grain's position is within the bucket's bounding box
         if left <= grain_pos.x <= right and bottom <= grain_pos.y <= top:
-            self.snd.play('add_sugar')
-            self.count += 1
-            return True  # Indicate that the grain was collected
+            self.count += 1  # Increase the sugar count
+            if sugar_grain not in self.collected_sugars:
+                
+                self.snd.play('add_sugar')  # Play sound for sugar being added
+                self.collected_sugars.append(sugar_grain)  # Store the collected sugar grain
 
+            # Create a PinJoint to keep the grain fixed inside the bucket
+            pin_position = (grain_pos.x, bottom + 0.1)  # Pin it just above the bottom wall
+            joint = pymunk.PinJoint(self.space.static_body, sugar_grain.body, pin_position)
+            sugar_grain.body.velocity = (0, 0)
+            
+            
+
+            self.space.add(joint)
+            self.joints.append(joint)  
+
+            return True  # Indicate that the grain was collected
+        
         return False  # Grain not collected
+    
 
     def delete(self):
         if not self.exploded:

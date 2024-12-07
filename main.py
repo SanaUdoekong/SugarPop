@@ -2,13 +2,14 @@
 # Module Name: Sugar Pop Main Module
 # Project: Sugar Pop Program
 # Date: Nov 17, 2024
-# By: Brett W. Huffman
+# By: Sana I. Udoekong
 # Description: The main implementation of the sugar pop game
 #############################################################
 
 import pygame as pg
 import pymunk  # Import Pymunk library
 import sys
+import help_bucket
 from settings import *
 import random
 import static_item
@@ -18,13 +19,14 @@ import bucket
 import level
 import message_display
 import sounds 
+import hud_display
 
 class Game:
     def __init__(self) -> None:
         pg.init()
         self.snd = sounds.Sound()
 
-        self.snd.load_bg()
+        # self.snd.play_bg('background')     # play backround music
 
         self.screen = pg.display.set_mode(RES)
         self.clock = pg.time.Clock()
@@ -46,12 +48,21 @@ class Game:
         self.sugar_grains = []
         self.buckets = []
         self.statics = []
-        self.total_sugar_count = None
+        self.total_sugar_count = 0
         self.level_spout_position = None
         self.level_grain_dropping = None
         self.mouse_down = False
         self.current_line = None
         self.message_display = message_display.MessageDisplay(font_size=72)
+        self.display = hud_display.Display()
+
+        self.help_bucket = help_bucket.HelpBucket(self.screen, self.space, (WIDTH/2), (HEIGHT - 30), 40, 40, 30)     
+
+        self.show_help_bucket = False
+        self.keys = []
+        self.bottom_removed = False
+
+        self.sugar_in_buckets = {}  
         
         # Load the intro image
         self.intro_image = pg.image.load("./images/SugarPop.png").convert()  # Load the intro image
@@ -151,24 +162,31 @@ class Game:
             
             # Calculate buckets count by counting each grain's position
             # First, explode or reset the counter on each bucket
-            for bucket in self.buckets:
+            for i in range(len(self.buckets)-1, -1, -1):
+                bucket = self.buckets[i]
                 if bucket.count >= bucket.needed_sugar:
                     bucket.explode(self.sugar_grains)
+                    del self.buckets[i]
                     # If all the buckets are gone, level up!
                     if not self.level_complete and self.check_all_buckets_exploded():
                         self.level_complete = True
-                        self.snd.pause_bg()
+
+                        # Play the sound for a completing a level
                         self.snd.play('lvl_complete')
-                        self.snd.unpause_bg()
+
                         self.message_display.show_message("Level Complete!", 2)
                         pg.time.set_timer(LOAD_NEW_LEVEL, 2000)  # Schedule next level load
                 else:
                     bucket.count_reset()
+
             # Count the grains in the un-exploded buckets
             for grain in self.sugar_grains:
                 for bucket in self.buckets:
                     bucket.collect(grain)
-                
+                        
+                # count the grains in the help bucket
+                self.help_bucket.collect(grain)
+
             # Drop sugar if needed
             if self.level_grain_dropping:
                 # Create new sugar to drop
@@ -179,12 +197,35 @@ class Game:
                     self.level_grain_dropping = False
 
     def draw_hud(self):
-        """Draw the HUD displaying the number of grains."""
+        """
+        Draw the HUD displaying the number of grains, grains left, level, and number of grains per bucket.
+        It also shows the direction of the gravity
+        """
+
+        # Add the bucket position and count into the dictionary
+        for i in range(len(self.buckets)):
+            self.sugar_in_buckets[i] = (self.buckets[i].count, (self.buckets[i].x, self.buckets[i].y), self.buckets[i].exploded)
+
+        # Update values before displaying them
+        self.display.update_values(self.total_sugar_count, self.sugar_in_buckets,
+                                    (self.total_sugar_count-len(self.sugar_grains)), self.current_level)
+
+        # Check if the game has finished loading
+        if self.intro_image:
+            return 
+        
+        
+        # Draw an arrow to show th direction of the gravity
+        self.display.draw_gravity_direction(self.screen, (self.space.gravity[0], self.space.gravity[1]))
+
         # Prepare the text surface
-        if self.total_sugar_count:
-            text_surface = self.font.render(f'{self.total_sugar_count - len(self.sugar_grains)}', True, (255, 255, 255))
-            # Draw the text surface on the screen
-            self.screen.blit(text_surface, (10, 10))  # Position at top-left corner
+        self.display.draw_level_count(self.screen, (70, 30))
+        self.display.draw_total_count(self.screen, (1000, 20))
+        self.display.draw_sugar_left(self.screen, (1000, 50))
+        self.display.draw_sugar_in_bucket(self.screen)
+        
+       
+
 
     def draw(self):
         '''Draw the overall game. Should call individual item draw() methods'''
@@ -230,12 +271,21 @@ class Game:
         # Show any messages needed        
         self.message_display.draw(self.screen)
 
+        # Draw help bucket
+        if self.show_help_bucket:
+            # self.help_bucket.exploded = False  # reset state of bucket so 
+            self.help_bucket.draw(self.screen)
+            self.display.draw_sugar_in_help_bucket(self.screen, self.help_bucket)
+
         # Update the display
         pg.display.update()
 
     def check_events(self):
+       
+
         '''Check for keyboard and mouse events'''
         for event in pg.event.get():
+
             if event.type == EXIT_APP or event.type == pg.QUIT or (event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE):
                 pg.quit()
                 sys.exit()
@@ -244,6 +294,7 @@ class Game:
             elif event.type == pg.KEYDOWN and event.key == pg.K_r:
                  self.current_level -= 1
                  pg.time.set_timer(LOAD_NEW_LEVEL, 100)  # Load level
+
             
             # Implement a pause
             elif event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
@@ -274,11 +325,22 @@ class Game:
                 self.level_grain_dropping = True
                 # Disable the timer after the first trigger
                 pg.time.set_timer(START_FLOW, 0)
+
+            elif event.type == pg.KEYDOWN and event.key == pg.K_h:
+                # enable help bucket when h is pressed
+                self.show_help_bucket = True
+                pg.time.set_timer(EXPLODE_HELP_BUCKET, 20000)    # set timer to display help bucket to 30 seconds
+                self.help_bucket.reset(self.screen, self.space, (WIDTH/2), (HEIGHT - 30), 40, 40, 30)     
+
+
+            elif event.type == pg.KEYDOWN and event.key == pg.K_g:
+                # reverse gravity when g is pressed
+                self.space.gravity = ((self.space.gravity[0] *-1), (self.space.gravity[1] *-1))
                 
             elif event.type == LOAD_NEW_LEVEL:
                 pg.time.set_timer(LOAD_NEW_LEVEL, 0)  # Clear the time
                 self.intro_image = None
-                self.current_level += 1
+                self.current_level += 1 
                 
                 if not self.load_level(self.current_level):
                     self.message_display.show_message("You Win!", 5)  # End of game message
@@ -286,6 +348,38 @@ class Game:
                 else:
                     self.message_display.show_message(f"Level {self.current_level} Start!", 2)
                     
+            elif event.type == EXPLODE_HELP_BUCKET:
+                self.help_bucket.explode(self.sugar_grains)
+                pg.time.set_timer(EXPLODE_HELP_BUCKET, 0)
+                # self.help_bucket.exploded = False
+
+
+            # Remove the bottom wall when Enter key is pressed
+            elif event.type == pg.KEYDOWN and event.key ==pg.K_RETURN and not self.help_bucket.exploded:
+                if not self.bottom_removed:
+                    self.bottom_removed = True
+                    self.space.remove(self.help_bucket.bottom_wall)
+                    self.help_bucket.emptied = True  # Remove the bottom wall to release the sugar
+                else:
+                    self.bottom_removed = False
+                    self.space.add(self.help_bucket.bottom_wall)
+                
+        if not self.help_bucket.exploded: 
+            # Continuous movement based on keys being held down
+            keys = pg.key.get_pressed()  # Get the state of all keys
+
+            # Check for continuous movement using arrow keys
+            if keys[pg.K_LEFT]:
+                self.help_bucket.move(-5, 0)  # Move left
+            elif keys[pg.K_RIGHT]:
+                self.help_bucket.move(5, 0)  # Move right
+            elif keys[pg.K_DOWN]:
+                self.help_bucket.move(0, 5)  # Move down
+
+
+                
+
+                
     def run(self):
         '''Run the main game loop'''
         while True:
