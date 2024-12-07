@@ -363,6 +363,7 @@ class Game:
                 else:
                     self.bottom_removed = False
                     self.space.add(self.help_bucket.bottom_wall)
+                    self.help_bucket.emptied = True
                 
         if not self.help_bucket.exploded: 
             # Continuous movement based on keys being held down
