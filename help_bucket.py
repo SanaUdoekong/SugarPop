@@ -26,7 +26,8 @@ class HelpBucket:
     will keep dropping while your're trying to empty it. It cannot go 
     back up once it goes down. I can also pick up trapped sugars on the way. 
     When you click enter, it releases the items into a bucket.
-    To use it click "h" and it will appear.
+    To use it click "h" and it will appear. To dispose, click 'h' again to reset 
+    it or move it down till it dissapears.
     """
     def __init__(self, screen, space, x, y, width, height, needed_sugar):
         """
@@ -145,7 +146,8 @@ class HelpBucket:
 
     def move(self, dx, dy):
         """Move the bucket with the arrow keys."""
-        self.x += dx
+        if (self.x + dx) < (WIDTH - 20)  and (self.x + dx >  25):
+            self.x += dx
         self.y += dy
 
         # Update the positions of the walls based on the new bucket position
